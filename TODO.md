@@ -1,0 +1,2 @@
+- v2
+  - cover other languages than french and english in the GMeet UI
