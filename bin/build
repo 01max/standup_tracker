@@ -1,0 +1,40 @@
+#!/bin/bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SRC="$ROOT_DIR/lib/standup.js"
+DIST_DIR="$ROOT_DIR/dist"
+OUT="$DIST_DIR/bookmarklet.txt"
+MAX_BYTES=20480
+
+mkdir -p "$DIST_DIR"
+
+minify() {
+  sed 's|//.*$||' |
+  tr '\n' ' ' |
+  sed 's|/\*[^*]*\*/ *||g' |
+  sed 's/  */ /g' |
+  sed 's/^ //' |
+  sed 's/ $//'
+}
+
+urlencode() {
+  python3 -c "
+import urllib.parse, sys
+code = sys.stdin.read().strip()
+print('javascript:' + urllib.parse.quote(code, safe=\"(){}[];:,.!~*'-=+/<>?&|@#%^\" + '\"'))
+"
+}
+
+minify < "$SRC" | urlencode > "$OUT"
+
+SIZE=$(wc -c < "$OUT" | tr -d ' ')
+echo "Bookmarklet written to ${OUT#$ROOT_DIR/} ($SIZE bytes)"
+
+if [ "$SIZE" -gt "$MAX_BYTES" ]; then
+  echo "ERROR: Output exceeds ${MAX_BYTES} bytes ($SIZE bytes)" >&2
+  exit 1
+fi
+
+echo ""
+echo "Share dist/bookmarklet.txt + INSTALL.md with end users."
