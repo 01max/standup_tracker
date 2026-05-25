@@ -18,10 +18,6 @@ Output is written to `dist/bookmarklet.txt`. Requirements: `sed`, `tr`, `python3
 
 Add `window.__STANDUP_DEBUG = true` before running the bookmarklet to expose `window.__standup` for debugging.
 
-## v1 plan
-
-See [plans/openspec/changes/init-standup-foundation/](plans/openspec/changes/init-standup-foundation/).
-
 ## Known limitations
 
 - Self-tile detection only works in French and English (locale-limited).
