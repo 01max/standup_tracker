@@ -1,6 +1,6 @@
 # Standup Tracker
 
-A bookmarklet that adds a participant-tracking panel to Google Meet calls. Lists meeting participants, with planned per-speaker timer and tile overlays for follow-up releases.
+A bookmarklet that adds a participant-tracking panel to Google Meet calls with speaker detection, per-speaker round timer, and tile overlays.
 
 ## Quick start
 
@@ -21,7 +21,8 @@ Add `window.__STANDUP_DEBUG = true` before running the bookmarklet to expose `wi
 ## Known limitations
 
 - Self-tile detection only works in French and English (locale-limited).
-- Background tabs throttle DOM updates — keep the Meet tab visible.
+- Background tabs throttle DOM updates — keep the Meet tab visible. The timer also freezes when the tab is hidden.
+- Speaker detection relies on Meet-internal CSS class names (`.sxlEM` / `.BlxGDf`) which may break on redesign.
 - Side-panel dock detection is best-effort and may break on Meet redesigns.
 - Settings are in-memory only, discarded on each run.
 - Build size is capped at 20 KB; exceeding this will break the build.

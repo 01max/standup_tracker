@@ -9,6 +9,15 @@
 
 > **Browser refuses to save or truncates the URL?** The bookmarklet may have exceeded your browser's bookmark URL length limit. Rebuild from a smaller source or report it as a bug.
 
+## What it does
+
+Once the panel is open:
+
+- **Participant tracking** — Each person in the call is listed by name.
+- **Speaker detection** — A participant is marked as having spoken after ~3 seconds of uninterrupted talking (configurable via `minTalkSec` in the settings). Short bursts do not count.
+- **Round timer** — A per-speaker `mm:ss` timer appears in the panel header, resetting when someone else starts speaking. By default it only runs for the local user; toggle `Timer for me only` in settings to see everyone's timer.
+- **Tile overlays** — Each video tile is outlined green ✅ (has spoken) or red 🙋 (has not), with a matching emoji badge.
+
 ## How to use
 
 1. Join a Google Meet call.
@@ -19,7 +28,7 @@
 ## Known limitations
 
 - **FR/EN only:** Self-tile and presentation-tile detection relies on locale-specific labels (French and English). In other languages, your own tile may appear in the participant list.
-- **Keep the Meet tab visible:** If the Meet tab is in the background, browser throttling may delay participant list updates.
+- **Keep the Meet tab visible:** If the Meet tab is in the background, browser throttling may delay participant list updates and stretch the speaker-detection gate (a 3-second silence may need 10 seconds of wall time). The round timer also pauses when the tab is hidden.
 - **Side-panel docking:** The standup panel tries to dock inside Meet's open side panel. If no side panel is open, it appears as a floating window. This detection is best-effort and may break when Google redesigns Meet.
 - **No persistence:** Settings are reset each time you click the bookmark. This is a v1 limitation.
 
