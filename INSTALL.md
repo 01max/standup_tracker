@@ -16,7 +16,10 @@ Once the panel is open:
 - **Participant tracking** — Each person in the call is listed by name.
 - **Speaker detection** — A participant is marked as having spoken after ~3 seconds of uninterrupted talking (configurable via `minTalkSec` in the settings). Short bursts do not count.
 - **Round timer** — A per-speaker `mm:ss` timer appears in the panel header, resetting when someone else starts speaking. By default it only runs for the local user; toggle `Timer for me only` in settings to see everyone's timer.
-- **Tile overlays** — Each video tile is outlined green ✅ (has spoken) or red 🙋 (has not), with a matching emoji badge.
+- **Tile overlays** — Each video tile is bordered green (has spoken) or red (has not), with a matching emoji badge.
+- **Pause / Resume** — Use the pause button (⏸) in the header to temporarily stop scanning and hide tile decorations. Click again to resume.
+- **Reset session** — The reset button (↻) clears all spoken state while keeping the panel open, letting you start a new round without re-clicking the bookmark.
+- **Manual override** — Check or uncheck a participant in the list to manually mark them as spoken or not.
 
 ## How to use
 
@@ -28,7 +31,7 @@ Once the panel is open:
 ## Known limitations
 
 - **FR/EN only:** Self-tile and presentation-tile detection relies on locale-specific labels (French and English). In other languages, your own tile may appear in the participant list.
-- **Keep the Meet tab visible:** If the Meet tab is in the background, browser throttling may delay participant list updates and stretch the speaker-detection gate (a 3-second silence may need 10 seconds of wall time). The round timer also pauses when the tab is hidden.
+- **Keep the Meet tab visible:** If the Meet tab is in the background, browser throttling may delay participant list updates and stretch the speaker-detection gate (a 3-second silence may need 10 seconds of wall time). The round timer also pauses when the tab is hidden. A toast warns you when returning from a background tab that speaker states may be outdated.
 - **Side-panel docking:** The standup panel tries to dock inside Meet's open side panel. If no side panel is open, it appears as a floating window. This detection is best-effort and may break when Google redesigns Meet.
 - **No persistence:** Settings are reset each time you click the bookmark. This is a v1 limitation.
 

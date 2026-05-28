@@ -21,8 +21,9 @@ Add `window.__STANDUP_DEBUG = true` before running the bookmarklet to expose `wi
 ## Known limitations
 
 - Self-tile detection only works in French and English (locale-limited).
-- Background tabs throttle DOM updates — keep the Meet tab visible. The timer also freezes when the tab is hidden.
+- Background tabs throttle DOM updates — keep the Meet tab visible. The timer also freezes when the tab is hidden. A toast warns on tab return that speaker states may be outdated.
 - Speaker detection relies on Meet-internal CSS class names (`.sxlEM` / `.BlxGDf`) which may break on redesign.
+- Manual toggling of spoken state bypasses the contiguous-talk gate (intentional — it's a deliberate user override).
 - Side-panel dock detection is best-effort and may break on Meet redesigns.
 - Settings are in-memory only, discarded on each run.
 - Build size is capped at 20 KB; exceeding this will break the build.
