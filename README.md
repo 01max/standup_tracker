@@ -9,7 +9,7 @@ It adds a compact "Standup" toolbar to the Google Meet People panel and a "Talke
 
 <img src="README/ui.png" alt="standup_tracker UI inside the Google Meet People panel" width="420">
 
-## USAGE
+## Usage
 
 1. Open a Google Meet call.
 2. Open the People panel.
