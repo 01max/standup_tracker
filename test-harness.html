@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Standup Companion Test Harness</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: #f1f3f4;
+        background: #111317;
+        font: 14px/1.4 "Google Sans", Roboto, Arial, sans-serif;
+      }
+
+      main {
+        margin-left: 32px;
+        padding: 32px;
+      }
+
+      .meet-bar {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        display: flex;
+        gap: 10px;
+        padding: 12px;
+        background: #202124;
+        border-radius: 28px;
+      }
+
+      button {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 20px;
+        color: #f1f3f4;
+        background: #2b2c30;
+        min-height: 36px;
+        padding: 0 14px;
+        cursor: pointer;
+      }
+
+      [role="dialog"] {
+        position: fixed;
+        right: 24px;
+        top: 24px;
+        width: 300px;
+        background: #202124;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        padding: 12px;
+      }
+
+      [role="listitem"] {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 36px;
+        padding: 6px 4px;
+      }
+
+      .speaking {
+        color: #81c995;
+        outline: 1px solid #81c995;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Fake Google Meet</h1>
+      <p>This page simulates the visible DOM signals used by the bookmarklet.</p>
+      <p>Click People, then trigger speaking for Alice for at least 3 seconds.</p>
+    </main>
+
+    <section id="people-panel" class="hidden" role="dialog" aria-label="People">
+      <h2>People</h2>
+      <div role="list">
+        <div role="listitem" data-participant-name="Alice Martin">
+          <span>Alice Martin</span>
+          <span id="alice-speaking" aria-label="">Mic</span>
+        </div>
+        <div role="listitem" data-participant-name="Bastien Moreau">
+          <span>Bastien Moreau</span>
+          <span id="bastien-speaking" aria-label="">Mic</span>
+        </div>
+        <div role="listitem" data-participant-name="Camille Durand">
+          <span>Camille Durand</span>
+          <span id="camille-speaking" aria-label="">Mic</span>
+        </div>
+      </div>
+    </section>
+
+    <nav class="meet-bar" aria-label="Meeting controls">
+      <button type="button" aria-label="People" aria-expanded="false" id="people-button">People</button>
+      <button type="button" id="alice-button">Alice speaks 3.2s</button>
+      <button type="button" id="bastien-button">Bastien speaks 1s</button>
+      <button type="button" id="clear-button">Clear speaking</button>
+    </nav>
+
+    <script>
+      const peoplePanel = document.getElementById("people-panel");
+      const peopleButton = document.getElementById("people-button");
+      const speakers = {
+        alice: document.getElementById("alice-speaking"),
+        bastien: document.getElementById("bastien-speaking"),
+        camille: document.getElementById("camille-speaking")
+      };
+
+      peopleButton.addEventListener("click", () => {
+        const open = peoplePanel.classList.toggle("hidden") === false;
+        peopleButton.setAttribute("aria-expanded", String(open));
+      });
+
+      function clearSpeaking() {
+        for (const element of Object.values(speakers)) {
+          element.classList.remove("speaking");
+          element.removeAttribute("data-is-speaking");
+          element.setAttribute("aria-label", "");
+        }
+      }
+
+      function speak(key, label, ms) {
+        clearSpeaking();
+        speakers[key].classList.add("speaking");
+        speakers[key].setAttribute("data-is-speaking", "true");
+        speakers[key].setAttribute("aria-label", `${label} is speaking`);
+        window.setTimeout(clearSpeaking, ms);
+      }
+
+      document.getElementById("alice-button").addEventListener("click", () => speak("alice", "Alice Martin", 3200));
+      document.getElementById("bastien-button").addEventListener("click", () => speak("bastien", "Bastien Moreau", 1000));
+      document.getElementById("clear-button").addEventListener("click", clearSpeaking);
+    </script>
+    <script src="./standup-companion.js?v=20260605"></script>
+  </body>
+</html>
