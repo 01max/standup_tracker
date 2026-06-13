@@ -7,7 +7,7 @@
 
 It adds a compact "Standup" toolbar to the Google Meet People panel and a "Talked" checkbox beside each visible participant. The tracker keeps state in the current browser page only; it does not send data anywhere or persist attendance between meetings.
 
-![standup_tracker UI inside the Google Meet People panel](README/ui.png)
+<img src="README/ui.png" alt="standup_tracker UI inside the Google Meet People panel" width="420">
 
 ## USAGE
 
