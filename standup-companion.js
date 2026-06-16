@@ -9,6 +9,7 @@
   const SPEAKER_THRESHOLD_MS = 3000;
   const OBSERVER_DELAY_MS = 120;
   const SPEAKER_POLL_MS = 250;
+  const TILE_SPEAKER_SELECTOR = ".sxlEM, .BlxGDf";
 
   if (window[INSTANCE_KEY]) {
     window[INSTANCE_KEY].refresh();
@@ -197,6 +198,34 @@
     });
   }
 
+  const nameTemplates = [
+    /^more options for (.+)$/i,
+    /^pin (.+?)(?: to your main screen)?$/i,
+    /^mute (.+)$/i,
+    /^unmute (.+)$/i,
+    /^plus d'options pour (.+)$/i,
+    /^(?:\u00e9|e)pinglez (.+?)(?: sur votre \u00e9cran principal)?$/i,
+    /^retirez (?:la pr\u00e9sentation de )?(.+?) de votre \u00e9cran principal$/i,
+    /^couper le micro de (.+)$/i,
+    /^r\u00e9activer le micro de (.+)$/i
+  ];
+
+  function nameFromTemplatedLabel(label) {
+    const value = String(label || "").trim();
+    if (!value) {
+      return "";
+    }
+
+    for (const template of nameTemplates) {
+      const match = value.match(template);
+      if (match && match[1]) {
+        return cleanName(match[1]);
+      }
+    }
+
+    return "";
+  }
+
   function elementLeafText(element) {
     if (!element || !isVisible(element) || isOwnElement(element)) {
       return "";
@@ -233,6 +262,8 @@
 
     const candidates = [];
 
+    addCandidate(candidates, nameFromTemplatedLabel(row.getAttribute("aria-label")), "row:aria-label-template", 1);
+    addCandidate(candidates, nameFromTemplatedLabel(row.getAttribute("title")), "row:title-template", 1);
     addCandidate(candidates, row.getAttribute("data-participant-name"), "row:data-participant-name", 1);
     addCandidate(candidates, row.getAttribute("data-self-name"), "row:data-self-name", 1);
     addCandidate(candidates, row.getAttribute("aria-label"), "row:aria-label", 2);
@@ -250,6 +281,8 @@
       if (isOwnElement(element)) {
         continue;
       }
+      addCandidate(candidates, nameFromTemplatedLabel(element.getAttribute("aria-label")), "child:aria-label-template", 1);
+      addCandidate(candidates, nameFromTemplatedLabel(element.getAttribute("title")), "child:title-template", 1);
       addCandidate(candidates, element.getAttribute("aria-label"), "child:aria-label", 4);
       addCandidate(candidates, element.getAttribute("title"), "child:title", 5);
     }
@@ -805,16 +838,26 @@
 
   function matchParticipantFromText(text) {
     const cleaned = cleanName(text);
+    const templated = nameFromTemplatedLabel(text);
     const cleanedKey = normalizeName(cleaned);
+    const templatedKey = normalizeName(templated);
 
     if (cleanedKey && state.participants.has(cleanedKey)) {
       return state.participants.get(cleanedKey);
     }
 
+    if (templatedKey && state.participants.has(templatedKey)) {
+      return state.participants.get(templatedKey);
+    }
+
     const lowered = String(text || "").toLowerCase();
     for (const participant of state.participants.values()) {
       const name = participant.name.toLowerCase();
-      if (lowered.includes(name) || cleaned.toLowerCase().includes(name)) {
+      if (
+        lowered.includes(name) ||
+        cleaned.toLowerCase().includes(name) ||
+        templated.toLowerCase().includes(name)
+      ) {
         return participant;
       }
     }
@@ -822,8 +865,37 @@
     return null;
   }
 
+  function activeSpeakerMarkerForTile(tile) {
+    if (!tile || !tile.getAttribute || !tile.getAttribute("data-participant-id")) {
+      return null;
+    }
+
+    if (tile.matches && tile.matches(TILE_SPEAKER_SELECTOR)) {
+      return tile;
+    }
+
+    return tile.querySelector(TILE_SPEAKER_SELECTOR);
+  }
+
+  function activeSpeakerTiles() {
+    return safeQueryAll("[data-participant-id]").filter((tile) => activeSpeakerMarkerForTile(tile));
+  }
+
+  function speakerSignalForElement(element) {
+    const tile = element.closest ? element.closest("[data-participant-id]") : null;
+    const marker = activeSpeakerMarkerForTile(tile);
+
+    if (!marker) {
+      return "";
+    }
+
+    const matchedClass = Array.from(marker.classList || []).find((className) => className === "sxlEM" || className === "BlxGDf");
+    return matchedClass ? `tile:${matchedClass}` : "tile";
+  }
+
   function speakerCandidates() {
     const candidates = [
+      ...activeSpeakerTiles(),
       ...safeQueryAll("[data-is-speaking='true'], [data-speaking='true']"),
       ...safeQueryAll("[aria-label*='speaking' i]"),
       ...safeQueryAll("[aria-label*='talking' i]"),
@@ -847,6 +919,8 @@
         title: candidate.getAttribute("title") || "",
         dataIsSpeaking: candidate.getAttribute("data-is-speaking") || "",
         dataSpeaking: candidate.getAttribute("data-speaking") || "",
+        dataParticipantId: candidate.getAttribute("data-participant-id") || "",
+        signal: speakerSignalForElement(candidate),
         matchedName: matched ? matched.name : "",
         matchedKey: matched ? matched.key : ""
       };
@@ -968,6 +1042,8 @@
       className: String(element.getAttribute("class") || "").slice(0, 180),
       dataIsSpeaking: element.getAttribute("data-is-speaking") || "",
       dataSpeaking: element.getAttribute("data-speaking") || "",
+      dataParticipantId: element.getAttribute("data-participant-id") || "",
+      signal: speakerSignalForElement(element),
       text: text.slice(0, 180),
       bounds: {
         x: Math.round(rect.x),

@@ -18,6 +18,31 @@
         padding: 32px;
       }
 
+      .stage {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(120px, 180px));
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .meet-tile {
+        position: relative;
+        display: grid;
+        min-height: 110px;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        background: #202124;
+      }
+
+      .speaker-marker {
+        position: absolute;
+        inset: 8px;
+        border: 3px solid transparent;
+        border-radius: 10px;
+        pointer-events: none;
+      }
+
       .meet-bar {
         position: fixed;
         right: 24px;
@@ -58,9 +83,10 @@
         padding: 6px 4px;
       }
 
-      .speaking {
-        color: #81c995;
-        outline: 1px solid #81c995;
+      .sxlEM,
+      .BlxGDf {
+        border-color: #81c995;
+        box-shadow: 0 0 0 2px rgba(129, 201, 149, 0.2);
       }
 
       .hidden {
@@ -72,7 +98,21 @@
     <main>
       <h1>Fake Google Meet</h1>
       <p>This page simulates the visible DOM signals used by the bookmarklet.</p>
-      <p>Click People, then trigger speaking for Alice for at least 3 seconds.</p>
+      <p>Click People, then trigger tile-only speaking for Alice for at least 3 seconds.</p>
+      <section class="stage" aria-label="Video tiles">
+        <div class="meet-tile" data-participant-id="tile-alice" aria-label="Alice Martin">
+          <span>Alice Martin</span>
+          <span id="alice-tile-speaking" class="speaker-marker"></span>
+        </div>
+        <div class="meet-tile" data-participant-id="tile-bastien" aria-label="Bastien Moreau">
+          <span>Bastien Moreau</span>
+          <span id="bastien-tile-speaking" class="speaker-marker"></span>
+        </div>
+        <div class="meet-tile" data-participant-id="tile-camille" aria-label="Camille Durand">
+          <span>Camille Durand</span>
+          <span id="camille-tile-speaking" class="speaker-marker"></span>
+        </div>
+      </section>
     </main>
 
     <section id="people-panel" class="hidden" role="dialog" aria-label="People">
@@ -95,7 +135,7 @@
 
     <nav class="meet-bar" aria-label="Meeting controls">
       <button type="button" aria-label="People" aria-expanded="false" id="people-button">People</button>
-      <button type="button" id="alice-button">Alice speaks 3.2s</button>
+      <button type="button" id="alice-button">Alice speaks 3.8s</button>
       <button type="button" id="bastien-button">Bastien speaks 1s</button>
       <button type="button" id="clear-button">Clear speaking</button>
     </nav>
@@ -103,10 +143,19 @@
     <script>
       const peoplePanel = document.getElementById("people-panel");
       const peopleButton = document.getElementById("people-button");
-      const speakers = {
-        alice: document.getElementById("alice-speaking"),
-        bastien: document.getElementById("bastien-speaking"),
-        camille: document.getElementById("camille-speaking")
+      const speakerMarkers = {
+        alice: {
+          element: document.getElementById("alice-tile-speaking"),
+          className: "sxlEM"
+        },
+        bastien: {
+          element: document.getElementById("bastien-tile-speaking"),
+          className: "BlxGDf"
+        },
+        camille: {
+          element: document.getElementById("camille-tile-speaking"),
+          className: "sxlEM"
+        }
       };
 
       peopleButton.addEventListener("click", () => {
@@ -115,23 +164,19 @@
       });
 
       function clearSpeaking() {
-        for (const element of Object.values(speakers)) {
-          element.classList.remove("speaking");
-          element.removeAttribute("data-is-speaking");
-          element.setAttribute("aria-label", "");
+        for (const marker of Object.values(speakerMarkers)) {
+          marker.element.classList.remove("sxlEM", "BlxGDf");
         }
       }
 
-      function speak(key, label, ms) {
+      function speak(key, ms) {
         clearSpeaking();
-        speakers[key].classList.add("speaking");
-        speakers[key].setAttribute("data-is-speaking", "true");
-        speakers[key].setAttribute("aria-label", `${label} is speaking`);
+        speakerMarkers[key].element.classList.add(speakerMarkers[key].className);
         window.setTimeout(clearSpeaking, ms);
       }
 
-      document.getElementById("alice-button").addEventListener("click", () => speak("alice", "Alice Martin", 3200));
-      document.getElementById("bastien-button").addEventListener("click", () => speak("bastien", "Bastien Moreau", 1000));
+      document.getElementById("alice-button").addEventListener("click", () => speak("alice", 3800));
+      document.getElementById("bastien-button").addEventListener("click", () => speak("bastien", 1000));
       document.getElementById("clear-button").addEventListener("click", clearSpeaking);
     </script>
     <script src="./standup-companion.js?v=20260605"></script>
