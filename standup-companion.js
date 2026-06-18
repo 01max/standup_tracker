@@ -6,6 +6,10 @@
   const INSTANCE_KEY = "__meetStandupCompanion";
   const DEBUG_KEY = "__meetStandupCompanionDebug";
   const ROW_KEY_ATTR = "data-msc-participant-key";
+  const TILE_STATUS_CLASS = "msc-tile-status";
+  const TILE_OVERLAY_HOST_ATTR = "data-msc-tile-overlay-host";
+  const TILE_OVERLAY_POSITION_ATTR = "data-msc-tile-overlay-position";
+  const OWN_SELECTOR = `#${TOOLBAR_ID}, .msc-control, .${TILE_STATUS_CLASS}`;
   const SPEAKER_THRESHOLD_MS = 3000;
   const OBSERVER_DELAY_MS = 120;
   const SPEAKER_POLL_MS = 250;
@@ -240,7 +244,7 @@
   }
 
   function isOwnElement(element) {
-    return Boolean(element && element.closest && element.closest(`#${TOOLBAR_ID}, .msc-control`));
+    return Boolean(element && element.closest && element.closest(OWN_SELECTOR));
   }
 
   function rowTextWithoutOwnControls(row) {
@@ -249,7 +253,7 @@
     }
 
     const clone = row.cloneNode(true);
-    for (const element of clone.querySelectorAll(`#${TOOLBAR_ID}, .msc-control`)) {
+    for (const element of clone.querySelectorAll(OWN_SELECTOR)) {
       element.remove();
     }
     return clone.textContent || "";
@@ -618,6 +622,17 @@
       .msc-control.is-talked {
         color: #81c995;
       }
+
+      .${TILE_STATUS_CLASS} {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        z-index: 2147483647;
+        pointer-events: none;
+        user-select: none;
+        font: 22px/1 "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
+      }
     `;
     document.head.appendChild(style);
   }
@@ -728,12 +743,135 @@
     }
   }
 
+  function videoTileCandidates() {
+    const panel = state.lastPanel || findParticipantsPanel();
+
+    return safeQueryAll("[data-participant-id]").filter((tile) => {
+      if (!isVisible(tile) || isOwnElement(tile) || isTransientSurface(tile) || (panel && panel.contains(tile))) {
+        return false;
+      }
+
+      const rect = tile.getBoundingClientRect();
+      return rect.width >= 48 && rect.height >= 48;
+    });
+  }
+
+  function textWithoutOwnElements(element) {
+    if (!element) {
+      return "";
+    }
+
+    const clone = element.cloneNode(true);
+    for (const ownElement of clone.querySelectorAll(OWN_SELECTOR)) {
+      ownElement.remove();
+    }
+    return clone.textContent || "";
+  }
+
+  function tileCandidateText(tile) {
+    const parts = [
+      tile.getAttribute("data-participant-name"),
+      tile.getAttribute("data-self-name"),
+      tile.getAttribute("aria-label"),
+      tile.getAttribute("title"),
+      textWithoutOwnElements(tile)
+    ];
+
+    for (const element of safeQueryAll("[data-participant-name], [data-self-name], [aria-label], [title]", tile)) {
+      if (isOwnElement(element)) {
+        continue;
+      }
+
+      parts.push(
+        element.getAttribute("data-participant-name"),
+        element.getAttribute("data-self-name"),
+        element.getAttribute("aria-label"),
+        element.getAttribute("title")
+      );
+    }
+
+    return unique(parts.filter(Boolean)).join(" ");
+  }
+
+  function participantForTile(tile) {
+    return matchParticipantFromText(rowNameForElement(tile)) || matchParticipantFromText(tileCandidateText(tile));
+  }
+
+  function ensureTileOverlayHost(tile) {
+    if (tile.hasAttribute(TILE_OVERLAY_HOST_ATTR)) {
+      return;
+    }
+
+    tile.setAttribute(TILE_OVERLAY_HOST_ATTR, "");
+    if (window.getComputedStyle(tile).position === "static") {
+      tile.setAttribute(TILE_OVERLAY_POSITION_ATTR, tile.style.position || "");
+      tile.style.position = "relative";
+    }
+  }
+
+  function restoreTileOverlayHost(tile) {
+    if (!tile || !tile.hasAttribute(TILE_OVERLAY_HOST_ATTR)) {
+      return;
+    }
+
+    if (tile.hasAttribute(TILE_OVERLAY_POSITION_ATTR)) {
+      const originalPosition = tile.getAttribute(TILE_OVERLAY_POSITION_ATTR);
+      if (originalPosition) {
+        tile.style.position = originalPosition;
+      } else {
+        tile.style.removeProperty("position");
+      }
+      tile.removeAttribute(TILE_OVERLAY_POSITION_ATTR);
+    }
+
+    tile.removeAttribute(TILE_OVERLAY_HOST_ATTR);
+  }
+
+  function removeTileOverlay(overlay) {
+    const tile = overlay.parentElement;
+    overlay.remove();
+    restoreTileOverlayHost(tile);
+  }
+
+  function renderTileOverlays() {
+    const matchedTiles = new Set();
+
+    for (const tile of videoTileCandidates()) {
+      const participant = participantForTile(tile);
+      if (!participant) {
+        continue;
+      }
+
+      matchedTiles.add(tile);
+      ensureTileOverlayHost(tile);
+
+      let overlay = tile.querySelector(`:scope > .${TILE_STATUS_CLASS}`);
+      if (!overlay) {
+        overlay = createElement("span", {
+          className: TILE_STATUS_CLASS,
+          attrs: { "aria-hidden": "true" }
+        });
+        tile.appendChild(overlay);
+      }
+
+      overlay.textContent = participant.talked ? "✅" : "🙋";
+    }
+
+    for (const overlay of safeQueryAll(`.${TILE_STATUS_CLASS}`)) {
+      const tile = overlay.parentElement;
+      if (!tile || !matchedTiles.has(tile)) {
+        removeTileOverlay(overlay);
+      }
+    }
+  }
+
   function render() {
     const panel = findParticipantsPanel();
     state.lastPanel = panel;
     renderToolbar(panel);
     removeOrphanControls();
     renderParticipantControls();
+    renderTileOverlays();
   }
 
   function refresh() {
@@ -757,7 +895,7 @@
       return false;
     }
 
-    return Boolean(node.closest(`#${TOOLBAR_ID}, .msc-control`));
+    return Boolean(node.closest(OWN_SELECTOR));
   }
 
   function isOwnMutation(mutation) {
@@ -809,7 +947,7 @@
       element.getAttribute("data-self-name"),
       element.getAttribute("aria-label"),
       element.getAttribute("title"),
-      element.textContent
+      textWithoutOwnElements(element)
     ]
       .filter(Boolean)
       .join(" ")
@@ -830,7 +968,7 @@
       element.getAttribute("data-self-name"),
       element.getAttribute("aria-label"),
       element.getAttribute("title"),
-      element.textContent
+      textWithoutOwnElements(element)
     ]
       .filter(Boolean)
       .join(" ");
@@ -1027,7 +1165,7 @@
 
   function compactElementInfo(element) {
     const row = element.closest(`[${ROW_KEY_ATTR}], [data-participant-id], [data-participant-name], [role='listitem'], [role='option'], li`);
-    const text = cleanName(element.textContent || "");
+    const text = cleanName(textWithoutOwnElements(element));
     const rowName = row ? extractParticipantName(row) : rowNameForElement(element);
     const matched = matchParticipantFromText(rowName) || matchParticipantFromText(candidateTextForSpeakerElement(element));
     const rect = element.getBoundingClientRect();
@@ -1191,6 +1329,9 @@
     document.getElementById(STYLE_ID)?.remove();
     for (const control of safeQueryAll(".msc-control")) {
       control.remove();
+    }
+    for (const overlay of safeQueryAll(`.${TILE_STATUS_CLASS}`)) {
+      removeTileOverlay(overlay);
     }
     for (const row of safeQueryAll(`[${ROW_KEY_ATTR}]`)) {
       row.removeAttribute(ROW_KEY_ATTR);
