@@ -1,74 +1,91 @@
 # standup_tracker
 
-`standup_tracker` is a private, local bookmarklet for tracking who has spoken during a Google Meet standup.
+`standup_tracker` is a private, local Google Meet bookmarklet for tracking who has already spoken during a standup.
 
 > **Warning**
-> `standup_tracker` depends on Google Meet's current page structure. Because Google can change Meet's DOM, labels, or speaking indicators at any time, this script can break or become outdated without notice. If the controls stop appearing or auto-detection becomes unreliable, check the debugging section and update the selectors in `standup-companion.js`.
+> `standup_tracker` depends on Google Meet's rendered page structure. Google can change Meet's DOM, labels, participant rows, or speaking indicators at any time, so the bookmarklet can break without notice. If the controls stop appearing or auto-detection becomes unreliable, use the debugging helpers below and update the selector logic in `standup-companion.js`.
 
-It adds a compact "Standup" toolbar to the Google Meet People panel and a "Talked" checkbox beside each visible participant. The tracker keeps state in the current browser page only; it does not send data anywhere or persist attendance between meetings.
+The bookmarklet runs entirely inside the current browser page. It does not call a backend, send data anywhere, write to storage, or persist attendance between page refreshes.
 
 <img src="README/ui.png" alt="standup_tracker UI inside the Google Meet People panel" width="420">
+
+## What It Does
+
+- Adds a compact "Standup" toolbar to the Google Meet People panel.
+- Shows a talked count for the currently visible participants.
+- Adds a "Talked" checkbox to each detected participant row.
+- Mirrors talked state onto matched video tiles with a status marker.
+- Marks a participant as talked after Meet shows them speaking continuously for 3 seconds.
+- Keeps manual changes reversible: check, uncheck, reset, or rerun the bookmarklet to refresh.
+- Keeps all state in page memory only; refreshing or leaving the Meet clears the session.
 
 ## Usage
 
 1. Open a Google Meet call.
 2. Open the People panel.
 3. Run the `standup_tracker` bookmarklet.
-4. Use the "Talked" checkbox beside each participant to mark who has spoken.
-5. Watch the Standup count at the top of the People panel.
-6. Use "Reset" to clear the current standup state.
+4. Check "Talked" beside each participant as they finish.
+5. Watch the toolbar count and the video-tile status markers.
+6. Use "Reset" to clear the current standup.
 
-When Google Meet exposes a visible speaking state, `standup_tracker` also marks a participant as talked after they have been detected speaking continuously for 3 seconds.
-
-You can run the bookmarklet again in the same meeting to refresh and focus the existing controls.
+If the People panel changes after the bookmarklet starts, the script observes the page and refreshes the controls. Running the bookmarklet again in the same Meet refreshes and focuses the existing instance.
 
 ## Install
 
-Create a browser bookmark and paste the single line from `standup-companion.bookmarklet.js` into the bookmark URL field.
-
-For the most reliable workflow:
+Create a browser bookmark whose URL is the generated bookmarklet payload:
 
 1. Open `standup-companion.bookmarklet.js`.
-2. Copy the full `javascript:` line.
+2. Copy the full single `javascript:` line.
 3. Create or edit a browser bookmark.
-4. Paste that line as the bookmark URL.
+4. Paste that line into the bookmark URL field.
 5. Name the bookmark `standup_tracker`.
 
 ## Local Development
 
-The bookmarklet source lives in `standup-companion.js`. After editing it, rebuild the bookmarklet payload:
+There are no package dependencies. Edit the readable source in `standup-companion.js`, then rebuild the generated bookmarklet:
 
 ```sh
 node build-bookmarklet.mjs
 ```
 
-Use `test-harness.html` for a local fake Google Meet page that exercises the main People-panel and speaking-detection behavior.
+Use `test-harness.html` for a local fake Meet page. It loads `standup-companion.js` directly, exposes a fake People panel, and has buttons for testing manual checks, reset, short speaking signals, and the 3-second auto-check behavior.
 
-## Files
+## Implementation Notes
 
-- `standup-companion.js`: readable source for the bookmarklet.
-- `standup-companion.bookmarklet.js`: generated bookmarklet URL payload.
-- `build-bookmarklet.mjs`: dependency-free generator for the bookmarklet payload.
-- `test-harness.html`: local fake Meet page for quick behavior checks.
-- `README/ui.png`: screenshot of the controls in the Google Meet People panel.
+- Participant discovery is based on the visible Meet People panel, including role, accessibility, data attribute, title, and row text signals.
+- Video-tile status markers are added only when a visible tile can be matched to a known participant.
+- Speaking detection is inferred from visible Meet UI signals such as tile speaker classes, speaking data attributes, accessibility labels, titles, and status regions. The bookmarklet does not access audio streams.
+- A `MutationObserver` keeps participant rows, tile overlays, and speaker state synchronized as Meet re-renders.
+- Selector and name-cleaning logic is intentionally isolated in `standup-companion.js` because Meet's DOM is not a stable public API.
 
-## Behavior
+## Console API
 
-- Adds controls only after the Google Meet People panel is available.
-- Avoids modifying transient hover previews.
-- Marks participants directly in visible People rows.
-- Keeps talked/not-talked state in memory only.
-- Supports manual check, uncheck, refresh by rerunning the bookmarklet, and reset.
-- Auto-checks a participant after 3 continuous seconds of visible speaking state.
+The running bookmarklet exposes a small operational API:
 
-## Debugging
+```js
+window.__meetStandupCompanion.refresh()
+window.__meetStandupCompanion.focus()
+window.__meetStandupCompanion.destroy()
+```
 
-Google Meet DOM details can change. Selector logic is intentionally isolated in `standup-companion.js`, and the bookmarklet exposes a small console API for diagnostics:
+It also exposes diagnostics:
 
 ```js
 window.__meetStandupCompanionDebug.snapshot()
 window.__meetStandupCompanionDebug.logSnapshot()
+window.__meetStandupCompanionDebug.discover()
+window.__meetStandupCompanionDebug.panelCandidates()
+window.__meetStandupCompanionDebug.speakerCandidates()
+window.__meetStandupCompanionDebug.detectActiveSpeaker()
 window.__meetStandupCompanionDebug.traceSpeaking(5000)
 ```
 
-Use `logSnapshot()` after opening People if the bookmarklet does not find the panel. Use `traceSpeaking(5000)` while someone is talking to inspect the DOM changes Google Meet exposes for speaking state.
+Use `logSnapshot()` after opening the People panel if the bookmarklet does not find participants. Use `traceSpeaking(5000)` while someone is talking to inspect the DOM changes Meet exposes for active-speaker detection.
+
+## Files
+
+- `standup-companion.js`: readable bookmarklet source.
+- `standup-companion.bookmarklet.js`: generated single-line bookmarklet URL.
+- `build-bookmarklet.mjs`: dependency-free generator for the bookmarklet payload.
+- `test-harness.html`: local fake Meet page for behavior checks.
+- `LICENSE`: MIT license.
