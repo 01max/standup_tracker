@@ -854,7 +854,10 @@
         tile.appendChild(overlay);
       }
 
-      overlay.textContent = participant.talked ? "✅" : "🙋";
+      const status = participant.talked ? "✅" : "🙋";
+      if (overlay.textContent !== status) {
+        overlay.textContent = status;
+      }
     }
 
     for (const overlay of safeQueryAll(`.${TILE_STATUS_CLASS}`)) {
