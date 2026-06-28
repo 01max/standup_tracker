@@ -456,29 +456,41 @@
     return pressed.some(isVisible);
   }
 
-  function attemptOpenParticipantsPanel() {
-    if (state.participantsPanelAttempted || isParticipantsPanelOpen()) {
-      return;
+  function attemptOpenParticipantsPanel(options = {}) {
+    if (isParticipantsPanelOpen()) {
+      state.participantsPanelAttempted = true;
+      return true;
     }
 
-    state.participantsPanelAttempted = true;
+    if (state.participantsPanelAttempted && !options.force) {
+      return false;
+    }
 
     const selectors = [
       "button[aria-label*='Show everyone' i]",
       "button[aria-label*='People' i]",
       "button[aria-label*='Participants' i]",
+      "button[aria-label*='Afficher tout le monde' i]",
+      "button[aria-label*='Personnes' i]",
       "div[role='button'][aria-label*='Show everyone' i]",
       "div[role='button'][aria-label*='People' i]",
-      "div[role='button'][aria-label*='Participants' i]"
+      "div[role='button'][aria-label*='Participants' i]",
+      "div[role='button'][aria-label*='Afficher tout le monde' i]",
+      "div[role='button'][aria-label*='Personnes' i]"
     ];
 
     const button = selectors
       .flatMap((selector) => safeQueryAll(selector))
       .find((element) => isVisible(element) && element.getAttribute("aria-disabled") !== "true");
 
-    if (button) {
-      button.click();
+    if (!button) {
+      return false;
     }
+
+    state.participantsPanelAttempted = true;
+    button.click();
+    scheduleRefresh();
+    return true;
   }
 
   function syncParticipants(rows) {
@@ -878,6 +890,10 @@
   }
 
   function refresh() {
+    if (!state.participantsPanelAttempted) {
+      attemptOpenParticipantsPanel();
+    }
+
     const panel = findParticipantsPanel();
     state.lastPanel = panel;
 
@@ -1118,6 +1134,8 @@
   }
 
   function focus() {
+    attemptOpenParticipantsPanel({ force: true });
+
     const panel = findParticipantsPanel();
     if (panel) {
       panel.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -1370,6 +1388,7 @@
   };
 
   observeDom();
+  attemptOpenParticipantsPanel();
   refresh();
   state.speakerTimer = window.setInterval(tickSpeaker, SPEAKER_POLL_MS);
 })();

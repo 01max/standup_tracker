@@ -22,13 +22,12 @@ The bookmarklet runs entirely inside the current browser page. It does not call 
 ## Usage
 
 1. Open a Google Meet call.
-2. Open the People panel.
-3. Run the `standup_tracker` bookmarklet.
-4. Check "Talked" beside each participant as they finish.
-5. Watch the toolbar count and the video-tile status markers.
-6. Use "Reset" to clear the current standup.
+2. Run the `standup_tracker` bookmarklet.
+3. Check "Talked" beside each participant as they finish.
+4. Watch the toolbar count and the video-tile status markers.
+5. Use "Reset" to clear the current standup.
 
-If the People panel changes after the bookmarklet starts, the script observes the page and refreshes the controls. Running the bookmarklet again in the same Meet refreshes and focuses the existing instance.
+The bookmarklet opens the People panel when it starts. If the panel changes after the bookmarklet starts, the script observes the page and refreshes the controls. Running the bookmarklet again in the same Meet opens the People panel, refreshes, and focuses the existing instance.
 
 ## Install
 
@@ -80,7 +79,7 @@ window.__meetStandupCompanionDebug.detectActiveSpeaker()
 window.__meetStandupCompanionDebug.traceSpeaking(5000)
 ```
 
-Use `logSnapshot()` after opening the People panel if the bookmarklet does not find participants. Use `traceSpeaking(5000)` while someone is talking to inspect the DOM changes Meet exposes for active-speaker detection.
+Use `logSnapshot()` if the bookmarklet does not find participants after opening the People panel. Use `traceSpeaking(5000)` while someone is talking to inspect the DOM changes Meet exposes for active-speaker detection.
 
 ## Files
 
