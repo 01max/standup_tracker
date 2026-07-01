@@ -115,7 +115,14 @@
       </section>
     </main>
 
-    <section id="people-panel" class="hidden" role="dialog" aria-label="People">
+    <section id="chat-panel" class="hidden" role="dialog" aria-label="In-call messages">
+      <h2>In-call messages</h2>
+      <div role="list">
+        <div role="listitem">Alice Martin: I can go after standup.</div>
+      </div>
+    </section>
+
+    <section id="people-panel" class="hidden" role="dialog" aria-label="People" data-panel-container-id="sidePanel1">
       <h2>People</h2>
       <div role="list">
         <div role="listitem" data-participant-name="Alice Martin">
@@ -134,13 +141,18 @@
     </section>
 
     <nav class="meet-bar" aria-label="Meeting controls">
-      <button type="button" aria-label="People" aria-expanded="false" id="people-button">People</button>
+      <button type="button" aria-label="Show everyone in-call messages" aria-expanded="false" id="chat-button">Chat</button>
+      <button type="button" aria-label="People" aria-expanded="false" data-panel-id="sidePanel1" id="people-button">
+        People
+      </button>
       <button type="button" id="alice-button">Alice speaks 3.8s</button>
       <button type="button" id="bastien-button">Bastien speaks 1s</button>
       <button type="button" id="clear-button">Clear speaking</button>
     </nav>
 
     <script>
+      const chatPanel = document.getElementById("chat-panel");
+      const chatButton = document.getElementById("chat-button");
       const peoplePanel = document.getElementById("people-panel");
       const peopleButton = document.getElementById("people-button");
       const speakerMarkers = {
@@ -157,6 +169,11 @@
           className: "sxlEM"
         }
       };
+
+      chatButton.addEventListener("click", () => {
+        const open = chatPanel.classList.toggle("hidden") === false;
+        chatButton.setAttribute("aria-expanded", String(open));
+      });
 
       peopleButton.addEventListener("click", () => {
         const open = peoplePanel.classList.toggle("hidden") === false;
