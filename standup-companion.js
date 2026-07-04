@@ -15,7 +15,9 @@
   const SPEAKER_POLL_MS = 250;
   const TILE_SPEAKER_SELECTOR = ".sxlEM, .BlxGDf";
   const PARTICIPANTS_PANEL_CONTAINER_ID = "sidePanel1";
-  const PARTICIPANTS_LABEL_PATTERN = /\b(show everyone|people|participants?|personnes|afficher tout le monde)\b/i;
+  const PARTICIPANTS_PANEL_ID = "1";
+  const PARTICIPANTS_LABEL_PATTERN =
+    /\b(show everyone|people|participants?|personnes|afficher tout le monde|tout le monde)\b/i;
   const NON_PARTICIPANTS_LABEL_PATTERN =
     /\b(add people|chat|discussion|in-call messages?|messages?|message|activities|meeting details|host controls|video|tiles?)\b/i;
   const PANEL_ROLE_PATTERN = /^(dialog|complementary|region|tabpanel)$/i;
@@ -339,6 +341,32 @@
       .trim();
   }
 
+  function referencedText(element, attrName) {
+    if (!element) {
+      return "";
+    }
+
+    const ids = String(element.getAttribute(attrName) || "")
+      .split(/\s+/)
+      .filter(Boolean);
+
+    return ids
+      .map((id) => document.getElementById(id))
+      .filter(Boolean)
+      .map((target) => target.textContent || "")
+      .join(" ");
+  }
+
+  function tooltipText(element) {
+    if (!element) {
+      return "";
+    }
+
+    const id = element.getAttribute("data-tooltip-id") || element.getAttribute("tooltip-id");
+    const tooltip = id ? document.getElementById(id) : null;
+    return tooltip ? tooltip.textContent || "" : "";
+  }
+
   function elementLabelText(element) {
     if (!element) {
       return "";
@@ -349,6 +377,9 @@
         element.getAttribute("aria-label"),
         element.getAttribute("title"),
         element.getAttribute("data-tooltip"),
+        referencedText(element, "aria-labelledby"),
+        referencedText(element, "aria-describedby"),
+        tooltipText(element),
         element.textContent
       ]
         .filter(Boolean)
@@ -356,23 +387,26 @@
     );
   }
 
-  function elementReferencesPanel(element, panelId) {
+  function isKnownParticipantsPanel(element) {
     if (!element) {
       return false;
     }
 
-    const selector = [
-      `[aria-controls~='${panelId}']`,
-      `[data-panel-id='${panelId}']`,
-      `[data-panel-container-id='${panelId}']`,
-      `[data-panel-target-id='${panelId}']`
-    ].join(", ");
-
-    return Boolean(element.matches(selector) || element.querySelector(selector));
+    return element.matches(
+      `[data-panel-container-id='${PARTICIPANTS_PANEL_CONTAINER_ID}'], [data-panel-id='${PARTICIPANTS_PANEL_ID}']`
+    );
   }
 
-  function isKnownParticipantsPanel(element) {
-    return elementReferencesPanel(element, PARTICIPANTS_PANEL_CONTAINER_ID);
+  function controlReferencesParticipantsPanel(element) {
+    if (!element) {
+      return false;
+    }
+
+    return element.matches(
+      `[aria-controls~='${PARTICIPANTS_PANEL_CONTAINER_ID}'], ` +
+        `[data-panel-id='${PARTICIPANTS_PANEL_ID}'], ` +
+        `[data-panel-target-id='${PARTICIPANTS_PANEL_ID}']`
+    );
   }
 
   function looksLikeParticipantsLabel(label) {
@@ -436,6 +470,7 @@
   function panelCandidates() {
     const selectors = [
       `[data-panel-container-id='${PARTICIPANTS_PANEL_CONTAINER_ID}']`,
+      `[data-panel-id='${PARTICIPANTS_PANEL_ID}']`,
       "[role='dialog']",
       "[role='complementary']",
       "[role='region']",
@@ -469,6 +504,7 @@
   function findParticipantsPanel() {
     const selectors = [
       `[data-panel-container-id='${PARTICIPANTS_PANEL_CONTAINER_ID}']`,
+      `[data-panel-id='${PARTICIPANTS_PANEL_ID}']`,
       "[role='dialog'][aria-label*='people' i]",
       "[role='dialog'][aria-label*='participant' i]",
       "[role='complementary'][aria-label*='people' i]",
@@ -537,7 +573,7 @@
 
     return pressed.some((element) => {
       const label = elementLabelText(element);
-      return isVisible(element) && (isKnownParticipantsPanel(element) || looksLikeParticipantsLabel(label));
+      return isVisible(element) && (controlReferencesParticipantsPanel(element) || looksLikeParticipantsLabel(label));
     });
   }
 
@@ -545,12 +581,16 @@
     const selectors = [
       `button[aria-controls~='${PARTICIPANTS_PANEL_CONTAINER_ID}']`,
       `[role='button'][aria-controls~='${PARTICIPANTS_PANEL_CONTAINER_ID}']`,
-      `button[data-panel-id='${PARTICIPANTS_PANEL_CONTAINER_ID}']`,
-      `[role='button'][data-panel-id='${PARTICIPANTS_PANEL_CONTAINER_ID}']`,
+      `button[data-panel-id='${PARTICIPANTS_PANEL_ID}']`,
+      `[role='button'][data-panel-id='${PARTICIPANTS_PANEL_ID}']`,
       "button[aria-label]",
       "[role='button'][aria-label]",
+      "button[aria-labelledby]",
+      "[role='button'][aria-labelledby]",
       "button[title]",
-      "[role='button'][title]"
+      "[role='button'][title]",
+      "button[aria-haspopup='dialog']",
+      "[role='button'][aria-haspopup='dialog']"
     ];
 
     const elements = new Set();
@@ -571,7 +611,7 @@
       )
       .map((element) => {
         const label = elementLabelText(element);
-        const knownParticipantsPanel = isKnownParticipantsPanel(element);
+        const knownParticipantsPanel = controlReferencesParticipantsPanel(element);
         const labelLooksRight = looksLikeParticipantsLabel(label);
 
         return {

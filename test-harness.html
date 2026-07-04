@@ -64,6 +64,18 @@
         cursor: pointer;
       }
 
+      .meet-bar [role="button"] {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 20px;
+        color: #f1f3f4;
+        background: #2b2c30;
+        min-height: 36px;
+        padding: 0 14px;
+        cursor: pointer;
+      }
+
       [role="dialog"] {
         position: fixed;
         right: 24px;
@@ -115,36 +127,41 @@
       </section>
     </main>
 
-    <section id="chat-panel" class="hidden" role="dialog" aria-label="In-call messages">
-      <h2>In-call messages</h2>
-      <div role="list">
-        <div role="listitem">Alice Martin: I can go after standup.</div>
+    <section id="chat-panel" class="hidden" role="dialog" aria-label="In-call messages" data-panel-container-id="sidePanel2">
+      <div data-panel-id="2">
+        <h2>In-call messages</h2>
+        <div role="list">
+          <div role="listitem">Alice Martin: I can go after standup.</div>
+        </div>
       </div>
     </section>
 
     <section id="people-panel" class="hidden" role="dialog" aria-label="People" data-panel-container-id="sidePanel1">
-      <h2>People</h2>
-      <div role="list">
-        <div role="listitem" data-participant-name="Alice Martin">
-          <span>Alice Martin</span>
-          <span id="alice-speaking" aria-label="">Mic</span>
-        </div>
-        <div role="listitem" data-participant-name="Bastien Moreau">
-          <span>Bastien Moreau</span>
-          <span id="bastien-speaking" aria-label="">Mic</span>
-        </div>
-        <div role="listitem" data-participant-name="Camille Durand">
-          <span>Camille Durand</span>
-          <span id="camille-speaking" aria-label="">Mic</span>
+      <div data-panel-id="1">
+        <h2>People</h2>
+        <div role="list" aria-label="Participants">
+          <div role="listitem" data-participant-name="Alice Martin">
+            <span>Alice Martin</span>
+            <span id="alice-speaking" aria-label="">Mic</span>
+          </div>
+          <div role="listitem" data-participant-name="Bastien Moreau">
+            <span>Bastien Moreau</span>
+            <span id="bastien-speaking" aria-label="">Mic</span>
+          </div>
+          <div role="listitem" data-participant-name="Camille Durand">
+            <span>Camille Durand</span>
+            <span id="camille-speaking" aria-label="">Mic</span>
+          </div>
         </div>
       </div>
     </section>
 
     <nav class="meet-bar" aria-label="Meeting controls">
-      <button type="button" aria-label="Show everyone in-call messages" aria-expanded="false" id="chat-button">Chat</button>
-      <button type="button" aria-label="People" aria-expanded="false" data-panel-id="sidePanel1" id="people-button">
-        People
-      </button>
+      <button type="button" aria-label="Chat with everyone" aria-expanded="false" data-panel-id="2" id="chat-button">Chat</button>
+      <div role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="people-button-label" id="people-button">
+        <span style="display: none;" id="people-button-label">People</span>
+        <span>People</span>
+      </div>
       <button type="button" id="alice-button">Alice speaks 3.8s</button>
       <button type="button" id="bastien-button">Bastien speaks 1s</button>
       <button type="button" id="clear-button">Clear speaking</button>
@@ -196,6 +213,6 @@
       document.getElementById("bastien-button").addEventListener("click", () => speak("bastien", 1000));
       document.getElementById("clear-button").addEventListener("click", clearSpeaking);
     </script>
-    <script src="./standup-companion.js?v=20260605"></script>
+    <script src="./standup-companion.js?v=20260704"></script>
   </body>
 </html>
