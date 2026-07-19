@@ -18,8 +18,10 @@
   const PARTICIPANTS_PANEL_ID = "1";
   const PARTICIPANTS_LABEL_PATTERN =
     /\b(show everyone|people|participants?|personnes|afficher tout le monde|tout le monde)\b/i;
+  const EXACT_PARTICIPANTS_LABEL_PATTERN =
+    /^(show everyone|people|participants?|personnes|afficher tout le monde|tout le monde)(?:\s*\d+)?$/i;
   const NON_PARTICIPANTS_LABEL_PATTERN =
-    /\b(add people|chat|discussion|in-call messages?|messages?|message|activities|meeting details|host controls|video|tiles?)\b/i;
+    /\b(add people|chat|discussion|discuter|in-call messages?|messages?|message|activities|meeting details|host controls|video|tiles?)\b/i;
   const PANEL_ROLE_PATTERN = /^(dialog|complementary|region|tabpanel)$/i;
 
   if (window[INSTANCE_KEY]) {
@@ -418,6 +420,21 @@
     return NON_PARTICIPANTS_LABEL_PATTERN.test(compactText(label));
   }
 
+  function hasExactParticipantsLabel(element) {
+    if (!element) {
+      return false;
+    }
+
+    const labels = [
+      element.getAttribute("aria-label"),
+      element.getAttribute("title"),
+      element.getAttribute("data-tooltip"),
+      referencedText(element, "aria-labelledby")
+    ];
+
+    return labels.some((label) => EXACT_PARTICIPANTS_LABEL_PATTERN.test(compactText(label)));
+  }
+
   function panelLabel(element) {
     return [
       element.getAttribute("aria-label"),
@@ -613,6 +630,7 @@
         const label = elementLabelText(element);
         const knownParticipantsPanel = controlReferencesParticipantsPanel(element);
         const labelLooksRight = looksLikeParticipantsLabel(label);
+        const exactParticipantsLabel = hasExactParticipantsLabel(element);
 
         return {
           element,
@@ -620,7 +638,10 @@
           knownParticipantsPanel,
           labelLooksRight,
           labelLooksWrong: looksLikeNonParticipantsLabel(label),
-          score: (knownParticipantsPanel ? 100 : 0) + (labelLooksRight ? 25 : 0)
+          score:
+            (knownParticipantsPanel ? 100 : 0) +
+            (exactParticipantsLabel ? 50 : 0) +
+            (labelLooksRight ? 25 : 0)
         };
       })
       .filter((candidate) => !candidate.labelLooksWrong && (candidate.knownParticipantsPanel || candidate.labelLooksRight))

@@ -47,6 +47,12 @@ There are no package dependencies. Edit the readable source in `standup-companio
 node build-bookmarklet.mjs
 ```
 
+Run the dependency-free regression tests with:
+
+```sh
+node --test
+```
+
 Use `test-harness.html` for a local fake Meet page. It loads `standup-companion.js` directly, exposes a fake People panel, and has buttons for testing manual checks, reset, short speaking signals, and the 3-second auto-check behavior.
 
 ## Implementation Notes

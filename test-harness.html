@@ -157,11 +157,12 @@
     </section>
 
     <nav class="meet-bar" aria-label="Meeting controls">
-      <button type="button" aria-label="Chat with everyone" aria-expanded="false" data-panel-id="2" id="chat-button">Chat</button>
-      <div role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="people-button-label" id="people-button">
-        <span style="display: none;" id="people-button-label">People</span>
-        <span>People</span>
+      <button type="button" aria-label="Discuter avec tous les participants" aria-expanded="false" data-panel-id="2" id="chat-button">Chat</button>
+      <div role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="DPUxh-nav9Xe" aria-describedby="ucc-45" data-tooltip-id="ucc-45" id="people-button">
+        <span style="display: none;" id="DPUxh-nav9Xe">Participants</span>
+        <span>Participants</span>
       </div>
+      <div role="tooltip" aria-hidden="true" id="ucc-45">Appuyez sur la flèche vers le bas pour ouvrir le volet et sur Échap pour le fermer.</div>
       <button type="button" id="alice-button">Alice speaks 3.8s</button>
       <button type="button" id="bastien-button">Bastien speaks 1s</button>
       <button type="button" id="clear-button">Clear speaking</button>
@@ -213,6 +214,6 @@
       document.getElementById("bastien-button").addEventListener("click", () => speak("bastien", 1000));
       document.getElementById("clear-button").addEventListener("click", clearSpeaking);
     </script>
-    <script src="./standup-companion.js?v=20260704"></script>
+    <script src="./standup-companion.js?v=20260719"></script>
   </body>
 </html>
