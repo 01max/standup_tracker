@@ -14,6 +14,15 @@
   const OBSERVER_DELAY_MS = 120;
   const SPEAKER_POLL_MS = 250;
   const TILE_SPEAKER_SELECTOR = ".sxlEM, .BlxGDf";
+  const PARTICIPANTS_PANEL_CONTAINER_ID = "sidePanel1";
+  const PARTICIPANTS_PANEL_ID = "1";
+  const PARTICIPANTS_LABEL_PATTERN =
+    /\b(show everyone|people|participants?|personnes|afficher tout le monde|tout le monde)\b/i;
+  const EXACT_PARTICIPANTS_LABEL_PATTERN =
+    /^(show everyone|people|participants?|personnes|afficher tout le monde|tout le monde)(?:\s*\d+)?$/i;
+  const NON_PARTICIPANTS_LABEL_PATTERN =
+    /\b(add people|chat|discussion|discuter|in-call messages?|messages?|message|activities|meeting details|host controls|video|tiles?)\b/i;
+  const PANEL_ROLE_PATTERN = /^(dialog|complementary|region|tabpanel)$/i;
 
   if (window[INSTANCE_KEY]) {
     window[INSTANCE_KEY].refresh();
@@ -328,10 +337,109 @@
     return role.toLowerCase() === "tooltip";
   }
 
+  function compactText(value) {
+    return String(value || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function referencedText(element, attrName) {
+    if (!element) {
+      return "";
+    }
+
+    const ids = String(element.getAttribute(attrName) || "")
+      .split(/\s+/)
+      .filter(Boolean);
+
+    return ids
+      .map((id) => document.getElementById(id))
+      .filter(Boolean)
+      .map((target) => target.textContent || "")
+      .join(" ");
+  }
+
+  function tooltipText(element) {
+    if (!element) {
+      return "";
+    }
+
+    const id = element.getAttribute("data-tooltip-id") || element.getAttribute("tooltip-id");
+    const tooltip = id ? document.getElementById(id) : null;
+    return tooltip ? tooltip.textContent || "" : "";
+  }
+
+  function elementLabelText(element) {
+    if (!element) {
+      return "";
+    }
+
+    return compactText(
+      [
+        element.getAttribute("aria-label"),
+        element.getAttribute("title"),
+        element.getAttribute("data-tooltip"),
+        referencedText(element, "aria-labelledby"),
+        referencedText(element, "aria-describedby"),
+        tooltipText(element),
+        element.textContent
+      ]
+        .filter(Boolean)
+        .join(" ")
+    );
+  }
+
+  function isKnownParticipantsPanel(element) {
+    if (!element) {
+      return false;
+    }
+
+    return element.matches(
+      `[data-panel-container-id='${PARTICIPANTS_PANEL_CONTAINER_ID}'], [data-panel-id='${PARTICIPANTS_PANEL_ID}']`
+    );
+  }
+
+  function controlReferencesParticipantsPanel(element) {
+    if (!element) {
+      return false;
+    }
+
+    return element.matches(
+      `[aria-controls~='${PARTICIPANTS_PANEL_CONTAINER_ID}'], ` +
+        `[data-panel-id='${PARTICIPANTS_PANEL_ID}'], ` +
+        `[data-panel-target-id='${PARTICIPANTS_PANEL_ID}']`
+    );
+  }
+
+  function looksLikeParticipantsLabel(label) {
+    const value = compactText(label);
+    return PARTICIPANTS_LABEL_PATTERN.test(value) && !NON_PARTICIPANTS_LABEL_PATTERN.test(value);
+  }
+
+  function looksLikeNonParticipantsLabel(label) {
+    return NON_PARTICIPANTS_LABEL_PATTERN.test(compactText(label));
+  }
+
+  function hasExactParticipantsLabel(element) {
+    if (!element) {
+      return false;
+    }
+
+    const labels = [
+      element.getAttribute("aria-label"),
+      element.getAttribute("title"),
+      element.getAttribute("data-tooltip"),
+      referencedText(element, "aria-labelledby")
+    ];
+
+    return labels.some((label) => EXACT_PARTICIPANTS_LABEL_PATTERN.test(compactText(label)));
+  }
+
   function panelLabel(element) {
     return [
       element.getAttribute("aria-label"),
       element.getAttribute("title"),
+      element.getAttribute("data-panel-container-id"),
       headingText(element)
     ]
       .filter(Boolean)
@@ -341,16 +449,28 @@
   function panelCandidateDetails(element) {
     const rows = findParticipantRows(element);
     const label = panelLabel(element);
-    const labelLooksRight = /\b(people|participants?)\b/i.test(label);
+    const labelLooksRight = looksLikeParticipantsLabel(label);
+    const labelLooksWrong = looksLikeNonParticipantsLabel(label);
+    const knownParticipantsPanel = isKnownParticipantsPanel(element);
     const role = element.getAttribute("role") || "";
+    const panelRole = PANEL_ROLE_PATTERN.test(role);
     const rect = element.getBoundingClientRect();
     const transient = isTransientSurface(element);
-    const score = rows.length * 10 + (labelLooksRight ? 25 : 0) + (role === "dialog" || role === "complementary" ? 8 : 0);
+    const score =
+      rows.length * 10 +
+      (knownParticipantsPanel ? 100 : 0) +
+      (labelLooksRight ? 25 : 0) +
+      (role === "dialog" || role === "complementary" ? 8 : 0) -
+      (labelLooksWrong ? 100 : 0);
 
     return {
       element,
       role,
-      label: cleanName(label),
+      label: compactText(label),
+      labelLooksRight,
+      labelLooksWrong,
+      knownParticipantsPanel,
+      panelRole,
       rows,
       rowCount: rows.length,
       score,
@@ -366,6 +486,8 @@
 
   function panelCandidates() {
     const selectors = [
+      `[data-panel-container-id='${PARTICIPANTS_PANEL_CONTAINER_ID}']`,
+      `[data-panel-id='${PARTICIPANTS_PANEL_ID}']`,
       "[role='dialog']",
       "[role='complementary']",
       "[role='region']",
@@ -386,12 +508,20 @@
 
     return Array.from(elements)
       .map(panelCandidateDetails)
-      .filter((candidate) => candidate.rowCount > 0 || /\b(people|participants?)\b/i.test(candidate.label))
+      .filter(
+        (candidate) =>
+          !candidate.labelLooksWrong &&
+          (candidate.knownParticipantsPanel ||
+            candidate.labelLooksRight ||
+            (candidate.panelRole && candidate.rowCount > 0))
+      )
       .sort((a, b) => b.score - a.score || b.rowCount - a.rowCount);
   }
 
   function findParticipantsPanel() {
     const selectors = [
+      `[data-panel-container-id='${PARTICIPANTS_PANEL_CONTAINER_ID}']`,
+      `[data-panel-id='${PARTICIPANTS_PANEL_ID}']`,
       "[role='dialog'][aria-label*='people' i]",
       "[role='dialog'][aria-label*='participant' i]",
       "[role='complementary'][aria-label*='people' i]",
@@ -402,7 +532,12 @@
 
     for (const selector of selectors) {
       const panel = safeQueryAll(selector).find(isVisible);
-      if (panel && !isTransientSurface(panel) && findParticipantRows(panel).length > 0) {
+      if (
+        panel &&
+        !isTransientSurface(panel) &&
+        !looksLikeNonParticipantsLabel(panelLabel(panel)) &&
+        findParticipantRows(panel).length > 0
+      ) {
         return panel;
       }
     }
@@ -447,38 +582,93 @@
     }
 
     const pressed = safeQueryAll(
-      "button[aria-pressed='true'][aria-label*='people' i], " +
-        "button[aria-expanded='true'][aria-label*='people' i], " +
-        "button[aria-pressed='true'][aria-label*='participant' i], " +
-        "button[aria-expanded='true'][aria-label*='participant' i]"
+      "button[aria-pressed='true'], " +
+        "button[aria-expanded='true'], " +
+        "[role='button'][aria-pressed='true'], " +
+        "[role='button'][aria-expanded='true']"
     );
 
-    return pressed.some(isVisible);
+    return pressed.some((element) => {
+      const label = elementLabelText(element);
+      return isVisible(element) && (controlReferencesParticipantsPanel(element) || looksLikeParticipantsLabel(label));
+    });
   }
 
-  function attemptOpenParticipantsPanel() {
-    if (state.participantsPanelAttempted || isParticipantsPanelOpen()) {
-      return;
+  function participantPanelControls() {
+    const selectors = [
+      `button[aria-controls~='${PARTICIPANTS_PANEL_CONTAINER_ID}']`,
+      `[role='button'][aria-controls~='${PARTICIPANTS_PANEL_CONTAINER_ID}']`,
+      `button[data-panel-id='${PARTICIPANTS_PANEL_ID}']`,
+      `[role='button'][data-panel-id='${PARTICIPANTS_PANEL_ID}']`,
+      "button[aria-label]",
+      "[role='button'][aria-label]",
+      "button[aria-labelledby]",
+      "[role='button'][aria-labelledby]",
+      "button[title]",
+      "[role='button'][title]",
+      "button[aria-haspopup='dialog']",
+      "[role='button'][aria-haspopup='dialog']"
+    ];
+
+    const elements = new Set();
+
+    for (const selector of selectors) {
+      for (const element of safeQueryAll(selector)) {
+        elements.add(element);
+      }
+    }
+
+    return Array.from(elements)
+      .filter(
+        (element) =>
+          isVisible(element) &&
+          !isOwnElement(element) &&
+          element.getAttribute("aria-disabled") !== "true" &&
+          !element.hasAttribute("disabled")
+      )
+      .map((element) => {
+        const label = elementLabelText(element);
+        const knownParticipantsPanel = controlReferencesParticipantsPanel(element);
+        const labelLooksRight = looksLikeParticipantsLabel(label);
+        const exactParticipantsLabel = hasExactParticipantsLabel(element);
+
+        return {
+          element,
+          label,
+          knownParticipantsPanel,
+          labelLooksRight,
+          labelLooksWrong: looksLikeNonParticipantsLabel(label),
+          score:
+            (knownParticipantsPanel ? 100 : 0) +
+            (exactParticipantsLabel ? 50 : 0) +
+            (labelLooksRight ? 25 : 0)
+        };
+      })
+      .filter((candidate) => !candidate.labelLooksWrong && (candidate.knownParticipantsPanel || candidate.labelLooksRight))
+      .sort((a, b) => b.score - a.score);
+  }
+
+  function attemptOpenParticipantsPanel(options = {}) {
+    if (isParticipantsPanelOpen()) {
+      state.participantsPanelAttempted = true;
+      return true;
+    }
+
+    if (state.participantsPanelAttempted && !options.force) {
+      return false;
+    }
+
+    const [buttonCandidate] = participantPanelControls();
+    const button = buttonCandidate ? buttonCandidate.element : null;
+
+    if (!button) {
+      return false;
     }
 
     state.participantsPanelAttempted = true;
-
-    const selectors = [
-      "button[aria-label*='Show everyone' i]",
-      "button[aria-label*='People' i]",
-      "button[aria-label*='Participants' i]",
-      "div[role='button'][aria-label*='Show everyone' i]",
-      "div[role='button'][aria-label*='People' i]",
-      "div[role='button'][aria-label*='Participants' i]"
-    ];
-
-    const button = selectors
-      .flatMap((selector) => safeQueryAll(selector))
-      .find((element) => isVisible(element) && element.getAttribute("aria-disabled") !== "true");
-
-    if (button) {
-      button.click();
-    }
+    button.click();
+    scheduleRefresh();
+    return true;
   }
 
   function syncParticipants(rows) {
@@ -878,6 +1068,10 @@
   }
 
   function refresh() {
+    if (!state.participantsPanelAttempted) {
+      attemptOpenParticipantsPanel();
+    }
+
     const panel = findParticipantsPanel();
     state.lastPanel = panel;
 
@@ -1118,6 +1312,8 @@
   }
 
   function focus() {
+    attemptOpenParticipantsPanel({ force: true });
+
     const panel = findParticipantsPanel();
     if (panel) {
       panel.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -1370,6 +1566,7 @@
   };
 
   observeDom();
+  attemptOpenParticipantsPanel();
   refresh();
   state.speakerTimer = window.setInterval(tickSpeaker, SPEAKER_POLL_MS);
 })();
